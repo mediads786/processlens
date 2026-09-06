@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# ProcessLens runtime data
+processlens_data.json
+processlens_data.tmp
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test / temp output
+.pytest_cache/
+coverage.xml
+htmlcov/
+*.log
