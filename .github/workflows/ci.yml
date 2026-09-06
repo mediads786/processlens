@@ -1,0 +1,23 @@
+name: ProcessLens CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  syntax-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python sources
+        run: python -m py_compile app.py app/*.py
+      - name: Install deployment dependencies
+        run: pip install -r requirements.txt
+      - name: Import Vercel app
+        env:
+          PROCESSLENS_PUBLIC: '1'
+        run: python -c "import app; print('FastAPI app import OK')"
