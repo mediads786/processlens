@@ -4,6 +4,22 @@ ProcessLens is a workflow-analysis web application for turning a written busines
 
 `Input → AS-IS → Review → Improve → TO-BE → Export`
 
+## Application preview
+
+![ProcessLens workflow input screen](assets/processlens-input.jpg)
+
+## Workflow at a glance
+
+```mermaid
+flowchart LR
+    A[Describe Process] --> B[AS-IS Workflow]
+    B --> C[Review & Edit]
+    C --> D[AI Findings]
+    D --> E[Accept / Reject]
+    E --> F[TO-BE Workflow]
+    F --> G[Export PDF / CSV / JSON]
+```
+
 ## What a user can do
 
 - Start from a plain-language process description or TXT/Markdown/CSV/DOCX input.
