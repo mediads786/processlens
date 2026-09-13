@@ -27,7 +27,7 @@ PUBLIC_MODE = os.getenv("PROCESSLENS_PUBLIC", "").strip().lower() in {"1", "true
 DEBUG_ERRORS = os.getenv("PROCESSLENS_DEBUG_ERRORS", "").strip().lower() in {"1", "true", "yes"}
 HOST = os.getenv("HOST", "0.0.0.0" if PUBLIC_MODE else "127.0.0.1")
 START_PORT = int(os.getenv("PORT", "8891"))
-VERSION = "1.0.13"
+VERSION = "1.0.14"
 
 
 
@@ -302,7 +302,8 @@ def workflow_svg(steps: list[Step]) -> str:
         for s in sorted(steps, key=lambda x: x.id):
             level = levels.get(s.id, 0)
             for target in s.next_step_ids:
-                if target in by_id and target != s.id:
+                # Backward edges are correction loops, not extra layout levels.
+                if target in by_id and target > s.id:
                     new_level = min(level + 1, len(steps) + 1)
                     if levels.get(target, -1) < new_level:
                         levels[target] = new_level
@@ -341,10 +342,19 @@ def workflow_svg(steps: list[Step]) -> str:
             sy = y1 + h1 / 2
             ty = y2 - h2 / 2
             mid = (sy + ty) / 2
-            parts.append(f'<path d="M{x1:.1f},{sy:.1f} V{mid:.1f} H{x2:.1f} V{ty:.1f}" fill="none" stroke="#A79EA4" stroke-width="1.8" marker-end="url(#{marker})"/>')
+            if target <= s.id:
+                # Route return paths outside the nodes, including self-loops.
+                lane = 20 + sorted(by_id).index(s.id) * 3
+                sx, tx = x1 - (85 if s.type in {"start", "end"} else 115), x2 - (85 if by_id[target].type in {"start", "end"} else 115)
+                ty = y2 - 15 if target == s.id else y2
+                sy = y1 + 15 if target == s.id else y1
+                mid = (sy + ty) / 2
+                parts.append(f'<path d="M{sx:.1f},{sy:.1f} H{lane:.1f} V{ty:.1f} H{tx:.1f}" fill="none" stroke="#A79EA4" stroke-width="1.8" marker-end="url(#{marker})"/>')
+            else:
+                parts.append(f'<path d="M{x1:.1f},{sy:.1f} V{mid:.1f} H{x2:.1f} V{ty:.1f}" fill="none" stroke="#A79EA4" stroke-width="1.8" marker-end="url(#{marker})"/>')
             label = s.next_step_labels.get(target, "")
             if label:
-                lx = (x1 + x2) / 2
+                lx = lane + 31 if target <= s.id else (x1 + x2) / 2
                 parts.append(f'<rect x="{lx-31:.1f}" y="{mid-17:.1f}" width="62" height="20" rx="10" fill="#FFFFFF" stroke="#DDD4CE"/>')
                 parts.append(f'<text x="{lx:.1f}" y="{mid-3:.1f}" text-anchor="middle" font-size="10" font-weight="700" fill="#6E626A">{esc(label)}</text>')
     for s in steps:
@@ -552,7 +562,7 @@ def rebuild(form, a):
         if old:
             for target in old.next_step_ids:
                 mapped = old_to_new.get(target)
-                if mapped and mapped > new_id and mapped not in next_ids:
+                if mapped and mapped not in next_ids:
                     next_ids.append(mapped)
                     label = old.next_step_labels.get(target, "")
                     if label:

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.14
+
+- Preserve terminal outcomes and correction loops in AI workflow graphs and review saves.
+- Reject invalid AI transition targets instead of inventing sequential connections.
+- Draw backward connections outside workflow nodes and clarify AI transition instructions.
+- Fix private Blob connection selection, response reading, and first-request browser identity.
+- Add storage and workflow regression checks.
+
 ## 1.0.13 — Release candidate
 
 - Added dedicated public landing page and interactive product preview.

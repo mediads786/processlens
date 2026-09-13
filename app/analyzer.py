@@ -372,15 +372,17 @@ def _graph_from_ai(raw_steps: list[dict], include_issues: bool = True) -> list[S
             str(raw.get("issue_notes") or "")[:400] if include_issues else "",
             {},
         )
-        transitions = raw.get("transitions") or []
+        transitions = raw.get("transitions")
+        if not isinstance(transitions, list):
+            raise ValueError("AI workflow must specify transitions; an empty list ends a branch.")
         for tr in transitions[:4]:
             try:
                 target_local = int(tr.get("target_id"))
-            except Exception:
-                continue
+            except Exception as exc:
+                raise ValueError("AI workflow contains an invalid transition.") from exc
             target_actual = local_to_actual.get(target_local)
-            if target_actual is None or target_actual <= actual_id:
-                continue
+            if target_actual is None:
+                raise ValueError("AI workflow transition references a missing node.")
             if target_actual not in step.next_step_ids:
                 step.next_step_ids.append(target_actual)
                 label = str(tr.get("label") or "").strip()[:40]
@@ -389,9 +391,9 @@ def _graph_from_ai(raw_steps: list[dict], include_issues: bool = True) -> list[S
         middle.append(step)
 
     end_id = len(middle) + 2
-    for i, step in enumerate(middle):
+    for step in middle:
         if not step.next_step_ids:
-            step.next_step_ids = [middle[i + 1].id if i + 1 < len(middle) else end_id]
+            step.next_step_ids = [end_id]
     start = Step(1, "Process starts", "start", "Process owner", "—", "manual", [middle[0].id])
     end = Step(end_id, "Process ends", "end", "Process owner", "—", "manual", [])
     return [start, *middle, end]
@@ -413,7 +415,7 @@ def analyze(process_id: str, process_name: str, description: str,
     if online_attempted:
         try:
             data, provider = _call_online_json(
-                "You are a business-process analyst. Extract only the AS-IS process actually described. Return an editable directed workflow graph. Use compact node IDs 1..N. Decisions should have explicit forward transitions such as Yes/No when the source text supports them. Keep the graph acyclic: do not point to an earlier node. Identify actors and systems only when supported. Flag obvious operational friction. Do not invent quantified facts.",
+                "You are a business-process analyst. Extract only the AS-IS process actually described. Return an editable directed workflow graph. Use compact node IDs 1..N. Specify every outgoing transition explicitly, using Yes/No labels for supported decisions. Use transitions: [] to end a branch. Approval and rejection outcomes must end independently unless the source explicitly joins them. Preserve correction/resubmission loops with backward transitions to the appropriate earlier node; never route incomplete requests straight to approval. Identify actors and systems only when supported. Flag obvious operational friction. Do not invent quantified facts.",
                 f"Process name: {process_name}\n\nAS-IS description:\n{description}",
                 ASIS_SCHEMA,
                 gemini_key,
@@ -597,7 +599,7 @@ def generate_to_be(analysis: ProcessAnalysis, gemini_key: str = "", groq_key: st
                 for f in analysis.findings if f.accepted
             ]
             data, provider = _call_online_json(
-                "You are a senior business-process designer. Produce a concise directed TO-BE workflow graph from the reviewed AS-IS graph and ONLY the accepted findings. Use compact node IDs 1..N and explicit forward transitions. Decisions should use branch labels such as Yes/No where meaningful. Keep the graph acyclic. Do not apply rejected findings. Preserve necessary controls and human approvals. Mark automation only when plausible. Do not invent quantified savings.",
+                "You are a senior business-process designer. Produce a concise directed TO-BE workflow graph from the reviewed AS-IS graph and ONLY the accepted findings. Use compact node IDs 1..N and explicit transitions. Use transitions: [] to end a branch. Keep mutually exclusive outcomes separate and preserve necessary correction/resubmission loops, including backward transitions. Decisions should use branch labels such as Yes/No where meaningful. Do not apply rejected findings. Preserve necessary controls and human approvals. Mark automation only when plausible. Do not invent quantified savings.",
                 f"Process: {analysis.process_name}\n\nAS-IS:\n{json.dumps(reviewed, ensure_ascii=False)}\n\nAccepted findings:\n{json.dumps(accepted, ensure_ascii=False)}",
                 TOBE_SCHEMA,
                 gemini_key,
