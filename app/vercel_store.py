@@ -41,7 +41,7 @@ class BlobStore:
     def get(self, analysis_id: str):
         path = self._path(analysis_id)
         try:
-            result = self.client.get(path, access="private")
+            result = self.client.get(path, access="private", use_cache=False)
         except Exception as exc:
             # The SDK raises a dedicated not-found exception, but keeping the
             # boundary generic prevents storage-library changes from crashing UI routes.
@@ -50,7 +50,9 @@ class BlobStore:
             raise RuntimeError(f"Persistent storage read failed: {exc}") from exc
         if result is None or getattr(result, "status_code", 200) != 200:
             return None
-        raw = self._read_stream(getattr(result, "stream", None))
+        raw = getattr(result, "content", None)
+        if raw is None:
+            raw = self._read_stream(getattr(result, "stream", None))
         if not raw:
             return None
         return ProcessAnalysis.from_dict(json.loads(raw.decode("utf-8")))
