@@ -21,3 +21,7 @@ jobs:
         env:
           PROCESSLENS_PUBLIC: '1'
         run: python -c "import app; print('FastAPI app import OK')"
+      - name: Check browser storage isolation
+        run: |
+          pip install 'httpx>=0.28,<1'
+          python -m unittest discover -s tests -v

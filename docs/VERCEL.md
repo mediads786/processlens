@@ -25,6 +25,11 @@ Do **not** set `PROCESSLENS_DEBUG_ERRORS=1` in production unless temporarily tro
 
 Create/connect a **Private Vercel Blob** store. Vercel provides `BLOB_READ_WRITE_TOKEN` to the project.
 
+If the creation dialog offers **Add a read-write token env var**, enable it.
+If `BLOB_READ_WRITE_TOKEN` already exists, use the custom prefix
+`PROCESSLENS_BLOB`. The application prefers `PROCESSLENS_BLOB_READ_WRITE_TOKEN`
+when configured, while continuing to support the original variable name.
+
 The Saved Analyses screen is isolated by a random HttpOnly browser identifier. This is suitable for the V1 portfolio/demo; it is not account authentication.
 
 ## 5. Deploy and verify

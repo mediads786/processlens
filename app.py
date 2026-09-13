@@ -15,6 +15,10 @@ if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
 os.environ.setdefault("PROCESSLENS_PUBLIC", "1")
+# Prefer the dedicated connection over an older project-level Blob token.
+# Normalize before importing the SDK, which uses the standard variable name.
+if os.getenv("PROCESSLENS_BLOB_READ_WRITE_TOKEN", "").strip():
+    os.environ["BLOB_READ_WRITE_TOKEN"] = os.environ["PROCESSLENS_BLOB_READ_WRITE_TOKEN"].strip()
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
@@ -33,8 +37,14 @@ HAS_BLOB = bool(os.getenv("BLOB_READ_WRITE_TOKEN"))
 
 
 def _client_id(request: Request) -> str:
+    # Storage and the response cookie must share one identity on first requests.
+    cached = getattr(request.state, "processlens_client_id", None)
+    if cached is not None:
+        return cached
     value = request.cookies.get(CLIENT_COOKIE, "")
-    return value if CLIENT_RE.fullmatch(value) else uuid.uuid4().hex
+    client_id = value if CLIENT_RE.fullmatch(value) else uuid.uuid4().hex
+    request.state.processlens_client_id = client_id
+    return client_id
 
 
 def _set_cookie(response: Response, client_id: str) -> Response:
