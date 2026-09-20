@@ -6,7 +6,7 @@ ProcessLens is a workflow-analysis web application for turning a written busines
 
 ## Application preview
 
-![ProcessLens workflow input screen](assets/processlens-input.jpg)
+![ProcessLens application overview](assets/processlens-overview.jpg)
 
 ## Workflow at a glance
 
